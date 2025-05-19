@@ -1,0 +1,345 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "f3544742-7e84-44d8-b780-8265edd69fdb",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from transformers import AutoTokenizer, AutoModelForSequenceClassification\n",
+    "import torch\n",
+    "import requests\n",
+    "import re"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "a571cc32-7d91-412d-b69a-36e4ba5bf729",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tokenizer = AutoTokenizer.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')\n",
+    "\n",
+    "model = AutoModelForSequenceClassification.from_pretrained('nlptown/bert-base-multilingual-uncased-sentiment')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "a5d02f08-8f9f-473a-9281-503f9ebbd97d",
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "tokens = tokenizer.encode('I have cancelled mine', return_tensors='pt')\n",
+    "result = model(tokens)\n",
+    "result.logits\n",
+    "int(torch.argmax(result.logits))+1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "7390899a-008e-463a-8c80-5e4f7128ba16",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Making an function for the Bert model, the number will first be changed to an integer from 1 to 5\n",
+    "def sentiment_score(review):\n",
+    "    tokens = tokenizer.encode(review, return_tensors='pt')\n",
+    "    result = model(tokens)\n",
+    "    return int(torch.argmax(result.logits))+1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "9037506c-2062-4156-85b6-55a64e3c293e",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "       Car Model Language     Video ID         Author          Published At  \\\n",
+      "0  Tesla Model Y    Dutch  E5mfhe-Q6lE  @BartHuitsing  2023-06-26T11:38:09Z   \n",
+      "1  Tesla Model Y    Dutch  E5mfhe-Q6lE  @werner134897  2023-03-11T06:08:18Z   \n",
+      "2  Tesla Model Y    Dutch  E5mfhe-Q6lE    @ronnie9187  2023-01-17T15:07:13Z   \n",
+      "3  Tesla Model Y    Dutch  E5mfhe-Q6lE      @jote2275  2022-11-06T15:39:27Z   \n",
+      "4  Tesla Model Y    Dutch  E5mfhe-Q6lE      @Maszzmic  2022-01-16T20:44:26Z   \n",
+      "\n",
+      "             Updated At  Like Count  \\\n",
+      "0  2023-06-26T11:38:09Z           1   \n",
+      "1  2023-03-11T06:10:00Z           0   \n",
+      "2  2023-01-17T15:07:13Z           0   \n",
+      "3  2022-11-06T15:39:27Z           0   \n",
+      "4  2022-01-16T20:44:26Z           0   \n",
+      "\n",
+      "                                        Comment Text  \\\n",
+      "0  Eén van de belangrijkste voordelen van de Y in...   \n",
+      "1  Nadruk op hogere prijs en gewicht is mijns inz...   \n",
+      "2  Het valt me op dat er lakschade aan de voorkan...   \n",
+      "3  Electrische auto&#39;s zijn enorm groot en duu...   \n",
+      "4  <a href=\"https://www.youtube.com/watch?v=E5mfh...   \n",
+      "\n",
+      "                                Cleaned Comment Text  \n",
+      "0  eén van de belangrijk voordeel van de y in zij...  \n",
+      "1  nadruk op hoog prijs en gewicht zijn Mijns inz...  \n",
+      "2  het vallen me op dat er lakschade aan de voork...  \n",
+      "3  electrische auto zijn enorm groot en duur de k...  \n",
+      "4                                     4:12 kippenvel  \n",
+      "       Car Model Language     Video ID             Author  \\\n",
+      "0  Tesla Model Y  English  PZ8NPeYFPCY            @carwow   \n",
+      "1  Tesla Model Y  English  PZ8NPeYFPCY  @jamesskinner1902   \n",
+      "2  Tesla Model Y  English  PZ8NPeYFPCY    @erichalfbee503   \n",
+      "3  Tesla Model Y  English  PZ8NPeYFPCY        @prayasdash   \n",
+      "4  Tesla Model Y  English  PZ8NPeYFPCY        @ooweesaler   \n",
+      "\n",
+      "           Published At            Updated At  Like Count  \\\n",
+      "0  2021-12-07T11:35:32Z  2021-12-07T11:35:32Z         508   \n",
+      "1  2024-12-20T10:37:45Z  2024-12-20T10:37:45Z           0   \n",
+      "2  2024-12-17T10:22:32Z  2024-12-17T10:22:32Z           0   \n",
+      "3  2024-11-30T11:09:04Z  2024-11-30T11:09:04Z           0   \n",
+      "4  2024-11-27T09:30:12Z  2024-11-27T09:30:12Z           0   \n",
+      "\n",
+      "                                        Comment Text  \\\n",
+      "0  What should the next Tesla be called? &#39;Tes...   \n",
+      "1  What stiff competition exactly does rhe model ...   \n",
+      "2  I was given one as a company car as my Kia lea...   \n",
+      "3  The Model Y has to be the ugliest Tesla. Like ...   \n",
+      "4  No way is that boot so big (useable) unless me...   \n",
+      "\n",
+      "                                Cleaned Comment Text  \n",
+      "0     what should the next tesla be call tesla model  \n",
+      "1  what stiff competition exactly do rhe model y ...  \n",
+      "2  I be give one as a company car as my kia lease...  \n",
+      "3  the model y have to be the ugly tesla like the...  \n",
+      "4  no way be that boot so big useable unless meas...  \n"
+     ]
+    }
+   ],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "\n",
+    "df_dutch = pd.read_csv(\"dutch_comments_filtered_combined.csv\")\n",
+    "df_english = pd.read_csv(\"english_comments_filtered_combined.csv\")\n",
+    "\n",
+    "print(df_dutch.head())\n",
+    "print(df_english.head())"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "94b9e3ba-493d-4b68-9cbc-3a199c77b1a3",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Missing values in Dutch comments: 0\n",
+      "Missing values in English comments: 25\n"
+     ]
+    }
+   ],
+   "source": [
+    "# BERT does not work with NA therefore NA will be checked and replaced.\n",
+    "missing_dutch = df_dutch['Cleaned Comment Text'].isna().sum()\n",
+    "missing_english = df_english['Cleaned Comment Text'].isna().sum()\n",
+    "\n",
+    "print(f\"Missing values in Dutch comments: {missing_dutch}\")\n",
+    "print(f\"Missing values in English comments: {missing_english}\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "3f6b6c45-15b1-400e-bd11-e12a987194c3",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_dutch['sentiment_score'] = df_dutch['Cleaned Comment Text'].apply(\n",
+    "    lambda x: sentiment_score(x[:512]) if isinstance(x, str) else None\n",
+    ")\n",
+    "\n",
+    "df_english['sentiment_score'] = df_english['Cleaned Comment Text'].apply(\n",
+    "    lambda x: sentiment_score(x[:512]) if isinstance(x, str) else None\n",
+    ")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "id": "17967890-5c63-49a4-a0a8-2663644c5c00",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_english.to_csv(\"english_comments_with_sentiment_score.csv\", index=False)\n",
+    "df_dutch.to_csv(\"dutch_comments_with_sentiment_score.csv\", index=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "35164275-b4d7-400f-975c-417384c27668",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "       Car Model Language     Video ID         Author          Published At  \\\n",
+      "0  Tesla Model Y    Dutch  E5mfhe-Q6lE  @BartHuitsing  2023-06-26T11:38:09Z   \n",
+      "1  Tesla Model Y    Dutch  E5mfhe-Q6lE  @werner134897  2023-03-11T06:08:18Z   \n",
+      "2  Tesla Model Y    Dutch  E5mfhe-Q6lE    @ronnie9187  2023-01-17T15:07:13Z   \n",
+      "3  Tesla Model Y    Dutch  E5mfhe-Q6lE      @jote2275  2022-11-06T15:39:27Z   \n",
+      "4  Tesla Model Y    Dutch  E5mfhe-Q6lE      @Maszzmic  2022-01-16T20:44:26Z   \n",
+      "\n",
+      "             Updated At  Like Count  \\\n",
+      "0  2023-06-26T11:38:09Z           1   \n",
+      "1  2023-03-11T06:10:00Z           0   \n",
+      "2  2023-01-17T15:07:13Z           0   \n",
+      "3  2022-11-06T15:39:27Z           0   \n",
+      "4  2022-01-16T20:44:26Z           0   \n",
+      "\n",
+      "                                        Comment Text  \\\n",
+      "0  Eén van de belangrijkste voordelen van de Y in...   \n",
+      "1  Nadruk op hogere prijs en gewicht is mijns inz...   \n",
+      "2  Het valt me op dat er lakschade aan de voorkan...   \n",
+      "3  Electrische auto&#39;s zijn enorm groot en duu...   \n",
+      "4  <a href=\"https://www.youtube.com/watch?v=E5mfh...   \n",
+      "\n",
+      "                                Cleaned Comment Text  sentiment_score  \n",
+      "0  eén van de belangrijk voordeel van de y in zij...                4  \n",
+      "1  nadruk op hoog prijs en gewicht zijn Mijns inz...                2  \n",
+      "2  het vallen me op dat er lakschade aan de voork...                2  \n",
+      "3  electrische auto zijn enorm groot en duur de k...                1  \n",
+      "4                                     4:12 kippenvel                4  \n",
+      "       Car Model Language     Video ID               Author  \\\n",
+      "0  Tesla Model Y  English  PZ8NPeYFPCY              @carwow   \n",
+      "1  Tesla Model Y  English  PZ8NPeYFPCY    @jamesskinner1902   \n",
+      "2  Tesla Model Y  English  PZ8NPeYFPCY      @erichalfbee503   \n",
+      "3  Tesla Model Y  English  PZ8NPeYFPCY          @prayasdash   \n",
+      "4  Tesla Model Y  English  PZ8NPeYFPCY          @ooweesaler   \n",
+      "5  Tesla Model Y  English  PZ8NPeYFPCY            @lakshh._   \n",
+      "6  Tesla Model Y  English  PZ8NPeYFPCY  @andreasnilsson1579   \n",
+      "7  Tesla Model Y  English  PZ8NPeYFPCY         @sergiyg2537   \n",
+      "8  Tesla Model Y  English  PZ8NPeYFPCY    @FishingSituation   \n",
+      "9  Tesla Model Y  English  PZ8NPeYFPCY        @hotvideo1890   \n",
+      "\n",
+      "           Published At            Updated At  Like Count  \\\n",
+      "0  2021-12-07T11:35:32Z  2021-12-07T11:35:32Z         508   \n",
+      "1  2024-12-20T10:37:45Z  2024-12-20T10:37:45Z           0   \n",
+      "2  2024-12-17T10:22:32Z  2024-12-17T10:22:32Z           0   \n",
+      "3  2024-11-30T11:09:04Z  2024-11-30T11:09:04Z           0   \n",
+      "4  2024-11-27T09:30:12Z  2024-11-27T09:30:12Z           0   \n",
+      "5  2024-11-24T06:20:18Z  2024-11-24T06:20:40Z           0   \n",
+      "6  2024-11-19T07:26:27Z  2024-11-19T07:26:27Z           0   \n",
+      "7  2024-11-15T04:14:49Z  2024-11-15T04:14:49Z           0   \n",
+      "8  2024-11-03T13:46:26Z  2024-11-03T13:46:26Z           0   \n",
+      "9  2024-11-02T11:42:30Z  2024-11-02T11:42:30Z           0   \n",
+      "\n",
+      "                                        Comment Text  \\\n",
+      "0  What should the next Tesla be called? &#39;Tes...   \n",
+      "1  What stiff competition exactly does rhe model ...   \n",
+      "2  I was given one as a company car as my Kia lea...   \n",
+      "3  The Model Y has to be the ugliest Tesla. Like ...   \n",
+      "4  No way is that boot so big (useable) unless me...   \n",
+      "5  The aura of Western nations is just lovely ❤.....   \n",
+      "6          Every time I need a car revy pick you 👍👍👍   \n",
+      "7  BS. This is not a car but rather a disposable ...   \n",
+      "8  That 800+ litres boot is fake as f. Put a big ...   \n",
+      "9                That roundabout hate 😅😂😂😂😂 was real   \n",
+      "\n",
+      "                                Cleaned Comment Text  sentiment_score  \n",
+      "0     what should the next tesla be call tesla model              5.0  \n",
+      "1  what stiff competition exactly do rhe model y ...              5.0  \n",
+      "2  I be give one as a company car as my kia lease...              1.0  \n",
+      "3  the model y have to be the ugly tesla like the...              3.0  \n",
+      "4  no way be that boot so big useable unless meas...              1.0  \n",
+      "5  the aura of western nation be just lovely ❤ if...              5.0  \n",
+      "6        every time I need a car revy pick you 👍 👍 👍              5.0  \n",
+      "7  bs this be not a car but rather a disposable g...              3.0  \n",
+      "8  that 800 + litre boot be fake as f. put a big ...              1.0  \n",
+      "9             that roundabout hate 😅 😂 😂 😂 😂 be real              5.0  \n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df_dutch.head())\n",
+    "print(df_english.head(10))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "id": "72184d9f-4b01-4480-9d0a-3a9a47ca6004",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Car Model                                                      Volvo XC40\n",
+      "Language                                                            Dutch\n",
+      "Video ID                                                      __QoKqx3MlE\n",
+      "Author                                                          @Jokesxxl\n",
+      "Published At                                         2024-06-02T18:32:04Z\n",
+      "Updated At                                           2024-06-02T18:32:04Z\n",
+      "Like Count                                                              1\n",
+      "Comment Text            Wat een saaie bak dit, koop dan een Alfa Stelv...\n",
+      "Cleaned Comment Text    wat een saai bak dit koop dan een alfa stelvio...\n",
+      "sentiment_score                                                         1\n",
+      "Name: 486, dtype: object\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df_dutch.iloc[486])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "4b2d42b4-244e-4a15-9ccd-5620f95c3fb5",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python [conda env:base] *",
+   "language": "python",
+   "name": "conda-base-py"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
