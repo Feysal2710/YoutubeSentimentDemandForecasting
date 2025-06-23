@@ -1,6 +1,6 @@
 # YoutubeSentimentDemandForecasting
-YouTube Comments Sentiment analysis &amp; Demand forecasting Automotive Industry in the Netherlands
-# YoutubeSentimentDemandForecasting
+YouTube Comments Sentiment analysis &amp; Demand forecasting Automotive Industry in the Netherlands. Keep in mind when opening the files check which step it is e.g. step 1 or step 2, which you can find at the end of the title of the files.
+#  Keep in mind when opening the files check which step it is e.g. step 1 or step 2, which you can find at the end of the title of the files.
 
 **Thesis Project: YouTube Comments Sentiment Analysis & Demand Forecasting for the Automotive Industry in the Netherlands**
 
